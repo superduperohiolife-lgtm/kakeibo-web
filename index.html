@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f7a5a">
+  <title>家計簿ダッシュボード</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <span class="logo">💰</span>
+    <h1>家計簿ダッシュボード</h1>
+    <span id="genTime" class="muted small"></span>
+    <button id="reloadBtn" class="icon-btn" title="更新">⟳</button>
+  </header>
+
+  <!-- 合言葉 -->
+  <div id="authView" class="auth-overlay hidden">
+    <div class="card auth-card">
+      <h2>合言葉を入力</h2>
+      <p class="muted">この端末で初回のみ。家族共有の合言葉を入力してください。</p>
+      <input type="password" id="tokenInput" placeholder="合言葉" autocomplete="off">
+      <button id="saveTokenBtn" class="primary">保存して開始</button>
+      <p id="authError" class="error"></p>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="overview">概要</button>
+    <button class="tab" data-tab="transactions">取引</button>
+    <button class="tab" data-tab="plans">予定支出</button>
+    <button class="tab" data-tab="analysis">分析</button>
+  </nav>
+
+  <main>
+    <!-- 概要 -->
+    <section id="tab-overview" class="tab-pane active">
+      <div class="month-bar">
+        <label for="monthSel">表示月</label>
+        <select id="monthSel"></select>
+      </div>
+      <div class="totals">
+        <div class="total-item total-all"><span class="label">今月合計</span><span class="value" id="totalAll">¥0</span></div>
+        <div class="total-item"><span class="label">日常支出</span><span class="value" id="totalDaily">¥0</span></div>
+        <div class="total-item total-extra"><span class="label">臨時支出</span><span class="value" id="totalExtra">¥0</span></div>
+      </div>
+      <div id="reviewBadge" class="review-badge hidden"></div>
+      <div class="grid2">
+        <div class="card"><h3>カテゴリ別内訳</h3><canvas id="catChart" height="220"></canvas></div>
+        <div class="card"><h3>日次推移</h3><canvas id="trendChart" height="220"></canvas></div>
+      </div>
+      <div class="card"><h3>予定支出 vs 実績（臨時）</h3><div id="planVsActual" class="pva-list"></div></div>
+    </section>
+
+    <!-- 取引 -->
+    <section id="tab-transactions" class="tab-pane">
+      <div class="card">
+        <div class="row-between">
+          <h3>取引一覧 <span id="txMonth" class="muted small"></span></h3>
+          <span class="muted small">行をクリックで修正</span>
+        </div>
+        <table class="tx-table">
+          <thead><tr><th>日付</th><th>店名</th><th>区分</th><th>カテゴリ</th><th class="num">金額</th><th>状態</th></tr></thead>
+          <tbody id="txBody"><tr><td colspan="6" class="muted">読み込み中…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 予定支出 -->
+    <section id="tab-plans" class="tab-pane">
+      <div class="card">
+        <div class="row-between"><h3>予定支出</h3><button id="addPlanBtn" class="small-btn">＋ 追加</button></div>
+        <table class="tx-table">
+          <thead><tr><th>名称</th><th>区分</th><th>カテゴリ</th><th class="num">予定額</th><th>予定日</th><th></th></tr></thead>
+          <tbody id="planBody"><tr><td colspan="6" class="muted">読み込み中…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 分析 -->
+    <section id="tab-analysis" class="tab-pane">
+      <div class="card">
+        <div class="row-between"><h3>Claude による支出分析</h3><button id="analyzeBtn" class="small-btn">分析を実行</button></div>
+        <p id="analysisTime" class="muted small"></p>
+        <div id="analysisText" class="analysis-text muted">「分析を実行」を押すか、毎日23:00の自動更新をお待ちください。</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 編集モーダル -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="modalTitle">編集</h3>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button id="modalCancel" class="ghost">キャンセル</button>
+        <button id="modalSave" class="primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+  </script>
+</body>
+</html>
