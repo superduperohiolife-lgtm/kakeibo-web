@@ -7,7 +7,7 @@
   var state = { month: null, plans: [], txns: [] };
   var charts = {};
 
-  var DAILY_CATS = ['ライフライン', '食費', '日用品', '外食', '交通', '医療・健康', '雑費'];
+  var DAILY_CATS = ['ライフライン', '食費', '日用品', '衣料・服飾', '外食', '交通', '医療・健康', '雑費'];
   var EXTRA_CATS = ['家電', '家具・インテリア', '調理・食器', '生活用品（大型）', '自転車・乗り物', '旅行・レジャー', '車関連', '住宅・修繕', '冠婚葬祭', '医療・税金・保険（高額/年払い）', 'その他臨時'];
 
   var el = function (id) { return document.getElementById(id); };
@@ -172,7 +172,16 @@
       + '<label class="fld">区分</label><select id="m_type"><option' + (t.expense_type === '日常' ? ' selected' : '') + '>日常</option><option' + (t.expense_type === '臨時' ? ' selected' : '') + '>臨時</option></select>'
       + '<label class="fld">カテゴリ</label><select id="m_cat">' + catOptions + '</select>'
       + '<label class="fld">状態</label><select id="m_status"><option' + (t.status === '確定' ? ' selected' : '') + '>確定</option><option' + (t.status === '要確認' ? ' selected' : '') + '>要確認</option></select>'
-      + itemsHtml;
+      + itemsHtml
+      + '<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px"><button id="m_delete" class="del-btn">この取引を削除</button><span class="muted small">（重複アップロード時などに使用）</span></div>';
+    var delBtn = document.getElementById('m_delete');
+    if (delBtn) delBtn.addEventListener('click', function () {
+      if (!confirm('この取引を削除しますか？元に戻せません。')) return;
+      apiPost({ action: 'delete_txn', month: state.month, id: t.id }).then(function (res) {
+        if (res && res.ok) { hideModal(); loadTransactions(); loadOverview(); }
+        else alert('削除に失敗: ' + (res && res.error));
+      });
+    });
     showModal(function () {
       var fields = {
         store: el('m_store').value, purchase_date: el('m_date').value,
