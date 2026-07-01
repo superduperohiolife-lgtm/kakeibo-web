@@ -72,6 +72,9 @@
       document.querySelectorAll('.tab-pane').forEach(function (p) { p.classList.remove('active'); });
       btn.classList.add('active');
       el('tab-' + btn.dataset.tab).classList.add('active');
+      // 予定支出は月に依存しないため、月フィルタを隠す
+      var gf = document.querySelector('.global-filter');
+      if (gf) gf.classList.toggle('hidden', btn.dataset.tab === 'plans');
     });
   });
 

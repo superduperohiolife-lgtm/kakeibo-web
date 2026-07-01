@@ -36,13 +36,16 @@
     <button class="tab" data-tab="analysis">分析</button>
   </nav>
 
+  <!-- 全タブ共通のフィルタ（タブの外に配置） -->
+  <div class="global-filter">
+    <label for="monthSel">表示月</label>
+    <select id="monthSel"></select>
+    <span class="filter-note">全タブ共通</span>
+  </div>
+
   <main>
     <!-- 概要 -->
     <section id="tab-overview" class="tab-pane active">
-      <div class="month-bar">
-        <label for="monthSel">表示月</label>
-        <select id="monthSel"></select>
-      </div>
       <div class="totals">
         <div class="total-item total-all"><span class="label">今月合計</span><span class="value" id="totalAll">¥0</span></div>
         <div class="total-item"><span class="label">日常支出</span><span class="value" id="totalDaily">¥0</span></div>
