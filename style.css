@@ -95,3 +95,21 @@ label.fld { display: block; font-size: 12px; color: var(--muted); margin-bottom:
 .modal-card { background: #fff; border-radius: 14px; padding: 20px; max-width: 420px; width: 100%; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
 .del-btn { color: var(--error); background: none; border: none; cursor: pointer; font-size: 13px; }
+
+/* ===================================================================
+   2026-08 追加: 要確認の理由表示
+   =================================================================== */
+.review-note {
+  background: #fff3e0; border: 1px solid #f0d8b8; border-radius: 8px;
+  padding: 10px 12px; margin: 0 0 14px; font-size: 13px; color: #8a4b0f;
+}
+.review-note .rv-list { list-style: none; padding: 0; margin: 0; }
+.review-note .rv-list li { padding: 3px 0; }
+.review-note .rv-list b { font-weight: 700; }
+.review-note .rv-hint { display: block; font-size: 11px; color: #a5713c; margin-top: 1px; }
+
+/* 取引一覧の「懸案」列 */
+.tx-table td.why {
+  font-size: 12px; color: #8a4b0f; max-width: 240px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

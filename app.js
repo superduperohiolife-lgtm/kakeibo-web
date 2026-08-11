@@ -7,13 +7,35 @@
   var state = { month: null, plans: [], txns: [] };
   var charts = {};
 
-  var DAILY_CATS = ['ライフライン', '食費', '日用品', '衣料・服飾', '外食', '交通', '医療・健康', '雑費'];
+  var DAILY_CATS = ['ライフライン', '食費', '日用品', '衣料・服飾', '外食', '交通', '医療・健康', '行政手数料', '雑費'];
   var EXTRA_CATS = ['家電', '家具・インテリア', '調理・食器', '生活用品（大型）', '自転車・乗り物', '旅行・レジャー', '車関連', '住宅・修繕', '冠婚葬祭', '医療・税金・保険（高額/年払い）', 'その他臨時'];
 
   var el = function (id) { return document.getElementById(id); };
   var yen = function (n) { return '¥' + (Math.round(Number(n) || 0)).toLocaleString('ja-JP'); };
   function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
   function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  // ===== 要確認の理由表示 =====
+  // 旧データ（理由フィールドを持たない取引）でも壊れないようフォールバックする。
+  function reviewText(t) {
+    if (!t || t.status !== '要確認') return '';
+    if (t.review_summary) return t.review_summary;
+    if (t.review_reasons && t.review_reasons.length) {
+      return t.review_reasons.map(function (r) { return (r.label || r.code || '') + (r.detail ? ' ' + r.detail : ''); }).join(' / ');
+    }
+    return '内容を確認してください';
+  }
+  /** 理由と「何を確認すればよいか」を並べたブロック（修正モーダルの先頭に出す） */
+  function reviewDetailHtml(t) {
+    if (!t || t.status !== '要確認') return '';
+    var rs = t.review_reasons || [];
+    if (!rs.length) return '<div class="review-note"><b>要確認</b>　' + escapeHtml(reviewText(t)) + '</div>';
+    var lines = rs.map(function (r) {
+      var head = escapeHtml((r.label || r.code || '') + (r.detail ? ' ' + r.detail : ''));
+      return '<li><b>' + head + '</b>' + (r.hint ? '<span class="rv-hint">' + escapeHtml(r.hint) + '</span>' : '') + '</li>';
+    }).join('');
+    return '<div class="review-note"><ul class="rv-list">' + lines + '</ul></div>';
+  }
 
   // ===== API =====
   function apiGet(action, params) {
@@ -90,7 +112,13 @@
       el('totalDaily').textContent = yen(t.daily);
       el('totalExtra').textContent = yen(t.extraordinary);
       var rb = el('reviewBadge');
-      if (d.needs_review_count > 0) { rb.classList.remove('hidden'); rb.textContent = '⚠ 要確認の取引が ' + d.needs_review_count + ' 件あります（「取引」タブで修正してください）'; }
+      if (d.needs_review_count > 0) {
+        var bd = d.needs_review_breakdown || [];
+        rb.classList.remove('hidden');
+        rb.textContent = '⚠ 要確認 ' + d.needs_review_count + ' 件'
+          + (bd.length ? '（' + bd.map(function (b) { return b.label + ' ' + b.count; }).join(' / ') + '）' : '')
+          + ' — 「取引」タブの行をクリックで修正';
+      }
       else rb.classList.add('hidden');
       renderCatChart(d.by_category || []);
       renderTrendChart(d.daily_trend || []);
@@ -143,7 +171,7 @@
   }
   function renderTxTable() {
     var body = el('txBody');
-    if (!state.txns.length) { body.innerHTML = '<tr><td colspan="6" class="muted">この月の取引はありません</td></tr>'; return; }
+    if (!state.txns.length) { body.innerHTML = '<tr><td colspan="7" class="muted">この月の取引はありません</td></tr>'; return; }
     body.innerHTML = '';
     state.txns.slice().sort(function (a, b) { return (b.purchase_date || '').localeCompare(a.purchase_date || ''); }).forEach(function (t) {
       var tr = document.createElement('tr');
@@ -153,22 +181,28 @@
         + '<td><span class="tag ' + (t.expense_type === '臨時' ? 'extra' : 'daily') + '">' + escapeHtml(t.expense_type || '') + '</span></td>'
         + '<td>' + escapeHtml(t.category || '') + '</td>'
         + '<td class="num">' + amtCell + '</td>'
-        + '<td><span class="tag ' + (t.status === '要確認' ? 'review' : 'ok') + '">' + escapeHtml(t.status || '') + '</span></td>';
+        + '<td><span class="tag ' + (t.status === '要確認' ? 'review' : 'ok') + '">' + escapeHtml(t.status || '') + '</span></td>'
+        + '<td class="why">' + escapeHtml(reviewText(t)) + '</td>';
       tr.addEventListener('click', function () { openTxEditor(t); });
       body.appendChild(tr);
     });
   }
   function openTxEditor(t) {
     var catOptions = DAILY_CATS.concat(EXTRA_CATS).map(function (c) { return '<option' + (c === t.category ? ' selected' : '') + '>' + c + '</option>'; }).join('');
+    var itemSum = (t.items || []).reduce(function (a, i) { return a + (Number(i.price) || 0); }, 0);
     var itemsHtml = (t.items && t.items.length)
-      ? '<label class="fld">品目明細（円）</label><div class="muted small" style="margin-bottom:10px">' + t.items.map(function (i) { return escapeHtml(i.name || '') + ' ' + yen(i.price || 0); }).join('<br>') + '</div>'
-      : '';
+      ? '<label class="fld">品目明細（円）</label><div class="muted small" style="margin-bottom:4px">' + t.items.map(function (i) { return escapeHtml(i.name || '') + ' ' + yen(i.price || 0); }).join('<br>') + '</div>'
+        + '<div class="muted small" style="margin-bottom:10px;border-top:1px solid var(--border);padding-top:6px">明細合計 ' + yen(itemSum)
+        + (t.tax ? '　＋税 ' + yen(t.tax) + '　＝ ' + yen(itemSum + Number(t.tax)) : '')
+        + '　/　総額 ' + yen(t.total) + '</div>'
+      : '<div class="muted small" style="margin-bottom:10px">品目明細なし（総額のみ）</div>';
     var fxHtml = (t.original_currency && t.original_currency !== 'JPY')
       ? '<div class="muted small" style="margin-bottom:10px">元通貨: ' + escapeHtml(t.original_currency) + ' ' + t.original_total + '（レート ' + t.fx_rate + ' で円換算済み）</div>'
       : '';
     el('modalTitle').textContent = '取引の修正';
     el('modalBody').innerHTML =
-      '<label class="fld">店名</label><input id="m_store" value="' + escapeHtml(t.store || '') + '">'
+      reviewDetailHtml(t)
+      + '<label class="fld">店名</label><input id="m_store" value="' + escapeHtml(t.store || '') + '">'
       + '<label class="fld">日付</label><input id="m_date" type="date" value="' + escapeHtml(t.purchase_date || '') + '">'
       + '<label class="fld">金額（円）</label><input id="m_total" type="number" value="' + (t.total != null ? t.total : '') + '">'
       + fxHtml
