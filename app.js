@@ -12,6 +12,11 @@
 
   var el = function (id) { return document.getElementById(id); };
   var yen = function (n) { return '¥' + (Math.round(Number(n) || 0)).toLocaleString('ja-JP'); };
+  // 明細行用。マイナス（値引き・不明分の超過）を「−¥1,270」の形で出す
+  var yenSigned = function (n) {
+    var v = Math.round(Number(n) || 0);
+    return (v < 0 ? '−' : '') + '¥' + Math.abs(v).toLocaleString('ja-JP');
+  };
   function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
   function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
@@ -189,12 +194,19 @@
   }
   function openTxEditor(t) {
     var catOptions = DAILY_CATS.concat(EXTRA_CATS).map(function (c) { return '<option' + (c === t.category ? ' selected' : '') + '>' + c + '</option>'; }).join('');
+    // 明細は「消費税」「不明分」を含めて総額とぴったり合うようサーバ側で組んである
     var itemSum = (t.items || []).reduce(function (a, i) { return a + (Number(i.price) || 0); }, 0);
+    var itemMatched = (itemSum === Math.round(Number(t.total) || 0));
     var itemsHtml = (t.items && t.items.length)
-      ? '<label class="fld">品目明細（円）</label><div class="muted small" style="margin-bottom:4px">' + t.items.map(function (i) { return escapeHtml(i.name || '') + ' ' + yen(i.price || 0); }).join('<br>') + '</div>'
-        + '<div class="muted small" style="margin-bottom:10px;border-top:1px solid var(--border);padding-top:6px">明細合計 ' + yen(itemSum)
-        + (t.tax ? '　＋税 ' + yen(t.tax) + '　＝ ' + yen(itemSum + Number(t.tax)) : '')
-        + '　/　総額 ' + yen(t.total) + '</div>'
+      ? '<label class="fld">品目明細（円）</label><ul class="item-list">'
+        + t.items.map(function (i) {
+            return '<li' + (i.auto ? ' class="auto"' : '') + '><span>' + escapeHtml(i.name || '') + '</span>'
+              + '<span>' + yenSigned(i.price || 0) + '</span></li>';
+          }).join('')
+        + '</ul>'
+        + '<div class="item-sum ' + (itemMatched ? 'matched' : 'unmatched') + '"><span>明細合計</span><span>'
+        + yen(itemSum) + (itemMatched ? '　＝ 総額' : '　/　総額 ' + yen(t.total)) + '</span></div>'
+        + '<div class="muted small" style="margin-bottom:10px">金額を直すと「不明分」が自動で計算し直され、明細合計は常に総額と一致します。</div>'
       : '<div class="muted small" style="margin-bottom:10px">品目明細なし（総額のみ）</div>';
     var fxHtml = (t.original_currency && t.original_currency !== 'JPY')
       ? '<div class="muted small" style="margin-bottom:10px">元通貨: ' + escapeHtml(t.original_currency) + ' ' + t.original_total + '（レート ' + t.fx_rate + ' で円換算済み）</div>'

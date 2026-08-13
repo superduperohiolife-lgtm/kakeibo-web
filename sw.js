@@ -1,5 +1,5 @@
 /* sw.js — アプリ枠キャッシュ。データ・CDN・GAS APIはネットワーク優先。 */
-var CACHE = 'kakeibo-web-v7';
+var CACHE = 'kakeibo-web-v8';
 var ASSETS = ['./', './index.html', './style.css', './app.js', './config.js', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png'];
 
